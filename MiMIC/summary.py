@@ -31,21 +31,23 @@ class Summarize:
         :param text: raw text
         :return: a list of sentences
         """
-        # TODO Add more examples of abbr. to prevent stopping, probably 1. use regex(e.g. re.sub()),
-        # reference: https://stackoverflow.com/questions/44209203/how-can-i-tokenize-this-text-into-sentences-with-regex
-        # TODO an example is shown below, but it contains "<>", and "Rev." unresolved
-        # acronyms_low = u"([a-z][.][a-z][.](?:[a-z][.])?)"
-        # acronyms_up = u"([A-Z][.][A-Z][.](?:[A-Z][.])?)"
-        # text = re.sub(acronyms_low, "\\1<>", text)
-        # text = re.sub(acronyms_up, "\\1<>", text)
-        # TODO 2. add punkt_param of abbr. manually
+        # TODO possible solutions for sth like "Rev.", "Ave."...:
+        # 1. add punkt_param of abbr. manually
         # https://stackoverflow.com/questions/34805790/how-to-avoid-nltks-sentence-tokenizer-splitting-on-abbreviations
+        # 2. use regex
+
+        # For acronyms, like i.e., F.B.I., ..., add a "<" sign after such that sent_tokenize will not stop sentences
+        acronyms_low = "([a-z][.][a-z][.](?:[a-z][.])?)"
+        acronyms_up = "([A-Z][.][A-Z][.](?:[A-Z][.])?)"
+        text = re.sub(acronyms_low, "\\1<", text)
+        text = re.sub(acronyms_up, "\\1<", text)
 
         # use default pretrained model from nltk, know most of the prefixes, suffixes
         # but not Rev. etc., and so forth
         tokens = sent_tokenize(text)
         sentences = []
         for token in tokens:
+            token = re.sub("<", " ", token)  # eliminate "<" sign(s) in sentences
             # deal with python input which may included "\n" and +
             token = re.sub("\n", " ", token)
             token = re.sub(" +", " ", token)
@@ -73,8 +75,8 @@ class Summarize:
         return sentences
 
     def preprocess(self, sentences: List) -> List:
-        """Preprocesses sentence tokens: 1) removes stopwords, 2) removes
-        special characters, 3) removes and leading and trailing spaces, 4)
+        """Preprocesses after tokenized: 1) removes stopwords 2) removes
+        special characters 3) removes and leading and trailing spaces 4)
         transforms all words to lowercase.
 
         :param sentences: list of sentences after tokenized
