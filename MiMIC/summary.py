@@ -1,4 +1,5 @@
 from typing import List
+
 # import nltk
 # nltk.download('punkt')
 from nltk.tokenize import word_tokenize, sent_tokenize
@@ -18,15 +19,15 @@ from sklearn.metrics.pairwise import linear_kernel
 
 
 class Summarize:
-
-    def __init__(self, text: str, lang: str = 'english'):
+    def __init__(self, text: str, lang: str = "english"):
         self.text = text
         self.lang = lang
 
     @staticmethod
     def sent_tokenizer(text) -> List:
-        """
-        Tokenize into
+        """Tokenize into lists of sentences, with primary processes eg ignore
+        citations.
+
         :param text: raw text
         :return: a list of sentences
         """
@@ -48,42 +49,48 @@ class Summarize:
             # deal with python input which may included "\n" and +
             token = re.sub("\n", " ", token)
             token = re.sub(" +", " ", token)
-            if token[0] in ['"', "'", ')', ']']:  # get rid of ', ", ), ] at the beginning
+            # get rid of ', ", ), ] at the beginning
+            if token[0] in [
+                '"',
+                "'",
+                ")",
+                "]",
+            ]:
                 token = token[1:]
             # get rid of citations at the beginning and/or ending
-            if token[0] == '[' and token[2] == ']':
+            if token[0] == "[" and token[2] == "]":
                 token = token[3:]
-            if token[0] == '[' and token[3] == ']':
+            if token[0] == "[" and token[3] == "]":
                 token = token[4:]
-            if token[-2] == ']' and token[-4] == '[':
+            if token[-2] == "]" and token[-4] == "[":
                 token = token[:-4] + token[-1]
-            if token[-2] == ']' and token[-5] == '[':
+            if token[-2] == "]" and token[-5] == "[":
                 token = token[:-5] + token[-1]
-            if token[0] == ' ':  # extra space at the beginning
+            if token[0] == " ":  # extra space at the beginning
                 token = token[1:]
             token.strip()
             sentences.append(token)
         return sentences
 
     def preprocess(self, sentences: List) -> List:
-        """
-        Preprocesses sentence tokens:
-        1) removes stopwords,
-        2) removes special characters,
-        3) removes and leading and trailing spaces,
-        4) transforms all words to lowercase.
+        """Preprocesses sentence tokens: 1) removes stopwords, 2) removes
+        special characters, 3) removes and leading and trailing spaces, 4)
+        transforms all words to lowercase.
+
         :param sentences: list of sentences after tokenized
         :return: 2D list of words in sentences e.g. [[w,w,w],[w,w,w]]
         """
         tokens = sentences
-        stop_words = stopwords.words(self.lang)  # stopwords e.g. i, he, she, they, it, 's, 've, 'd ....
+        # stopwords e.g. i, he, she, they, it, 's, 've, 'd ....
+        stop_words = stopwords.words(self.lang)
         preprocessed_sentences = []
         for index, s in enumerate(tokens):
             preprocessed_sentences.append([])
             words = word_tokenize(s)
             for word in words:
                 word = re.sub("\n", " ", word)
-                word = re.sub("[^A-Za-z]+", " ", word)  # remove special characters, not done in Smmry
+                # remove special characters, not done in Smmry
+                word = re.sub("[^A-Za-z]+", " ", word)
                 word = re.sub(" +", " ", word)
                 word = word.strip()
                 word = word.lower()  # transforms to lowercase
@@ -92,29 +99,31 @@ class Summarize:
         return preprocessed_sentences
 
     def tag_pos(self, preprocessed_sentences: List, pos=None) -> List:
-        """
-        Reference https://www.nltk.org/book/ch05.html
-        Keep relevant words by using `tag` which specify parts of speech of words
-        Based on Smmry, we want noun(NN), past participle verb(VBN, considered passive voice), and adjectives(JJ)
+        """Reference https://www.nltk.org/book/ch05.html Keep relevant words by
+        using `tag` which specify parts of speech of words Based on Smmry, we
+        want noun(NN), past participle verb(VBN, considered passive voice), and
+        adjectives(JJ)
+
         :param preprocessed_sentences: list of sentences after preprocessed
         :param pos: Parts Of Speech that is needed
         :return: 2D list of tagged words of sentences
         """
         if pos is None:
             # based on Smmry, highlight n.(NN), past participle v.(VBN, considered passive voice), and adj.(JJ)
-            pos = ['NN', 'VBN', 'JJ']
+            pos = ["NN", "VBN", "JJ"]
         tagged_words_sentences = []
         for index, sentence in enumerate(preprocessed_sentences):
             tagged_words_sentences.append([])
             for word in sentence:
-                word = pos_tag([word])  # tag word with its p-o-s, e.g. [('macalester', 'NN')]
+                # tag word with its p-o-s, e.g. [('macalester', 'NN')]
+                word = pos_tag([word])
                 if word[0][1] in pos:
                     tagged_words_sentences[index].append(word[0][0])
         return tagged_words_sentences
 
     def stem(self, tagged_words_sentences: List) -> List:
-        """
-        Stem words
+        """Stem words.
+
         :param tagged_words_sentences: 2D list of tagged words of sentences
         :return: 2D list of stemmed and tagged words of sentences
         """
@@ -128,10 +137,9 @@ class Summarize:
         return stemmed_sentences
 
     @staticmethod
-    def text_rank(similarity_matrix: np.ndarray,
-                  eps: float = 0.0001,
-                  p: float = 0.85
-                  ) -> np.ndarray:
+    def text_rank(
+        similarity_matrix: np.ndarray, eps: float = 0.0001, p: float = 0.85
+    ) -> np.ndarray:
         """
         reference: https://www.analyticsvidhya.com/blog/2018/11/introduction-text-summarization-textrank-python/
         :param similarity_matrix: input similarity_matrix
@@ -141,7 +149,9 @@ class Summarize:
         """
         P = np.ones(len(similarity_matrix)) / len(similarity_matrix)
         while True:
-            new_P = np.ones(len(similarity_matrix)) * (1 - p) / len(similarity_matrix) + p * similarity_matrix.T.dot(P)
+            new_P = np.ones(len(similarity_matrix)) * (1 - p) / len(
+                similarity_matrix
+            ) + p * similarity_matrix.T.dot(P)
             delta = abs(new_P - P).sum()
             if delta <= eps:
                 return new_P
@@ -185,11 +195,17 @@ class Summarize:
         """
         original_sentences = self.sent_tokenizer(self.text)
         preprocessed_tokens = self.preprocess(original_sentences)
-        tagged_tokens = self.tag_pos(preprocessed_tokens)  # tag first because after tag  v. -> n.
+        tagged_tokens = self.tag_pos(preprocessed_tokens)
+        # tag first because after tag  v. -> n.
         stemmed_tokens = self.stem(tagged_tokens)
         sentence_ranks = self.text_rank(self.build_similarity_matrix(stemmed_tokens))
-        ranked_sentence_indexes = [item[0] for item in sorted(enumerate(sentence_ranks), key=lambda item: -item[1])]
+        ranked_sentence_indexes = [
+            item[0]
+            for item in sorted(enumerate(sentence_ranks), key=lambda item: -item[1])
+        ]
         selected_sentences = sorted(ranked_sentence_indexes[:length])
-        summary = itemgetter(*selected_sentences)(original_sentences)  # make sure chronological order
-        out_summary = "\n\n".join(summary)  # a line of space between each output sentence
+        # make sure chronological order
+        summary = itemgetter(*selected_sentences)(original_sentences)
+        # a line of space between each output sentence
+        out_summary = "\n\n".join(summary)
         return out_summary
