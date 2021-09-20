@@ -24,7 +24,7 @@ class Summarize:
         self.lang = lang
 
     @staticmethod
-    def sent_tokenizer(text) -> List:
+    def sent_tokenizer(text: str) -> List:
         """Tokenize into lists of sentences, with primary processes eg ignore
         citations.
 
@@ -34,7 +34,7 @@ class Summarize:
         # TODO possible solutions for sth like "Rev.", "Ave."...:
         # 1. add punkt_param of abbr. manually
         # https://stackoverflow.com/questions/34805790/how-to-avoid-nltks-sentence-tokenizer-splitting-on-abbreviations
-        # 2. use regex
+        # 2. use regex sth like "upper letter + many lower letter + ."
 
         # For acronyms, like i.e., F.B.I., ..., add a "<" sign after such that sent_tokenize will not stop sentences
         acronyms_low = "([a-z][.][a-z][.](?:[a-z][.])?)"
@@ -51,7 +51,8 @@ class Summarize:
             # deal with python input which may included "\n" and +
             token = re.sub("\n", " ", token)
             token = re.sub(" +", " ", token)
-            # get rid of ', ", ), ] at the beginning
+            # get rid of ', ", ), ]... at the beginning.
+            # TODO '...' he said.
             if token[0] in [
                 '"',
                 "'",
@@ -59,7 +60,8 @@ class Summarize:
                 "]",
             ]:
                 token = token[1:]
-            # get rid of citations at the beginning and/or ending
+            # get rid of citations at the beginning and/or ending(1-99)
+            # TODO shorter way anything between "[]"
             if token[0] == "[" and token[2] == "]":
                 token = token[3:]
             if token[0] == "[" and token[3] == "]":
@@ -92,7 +94,8 @@ class Summarize:
             for word in words:
                 word = re.sub("\n", " ", word)
                 # remove special characters, not done in Smmry
-                word = re.sub("[^A-Za-z]+", " ", word)
+                # e.g. fig1, $ @..., but no Covid-19
+                # word = re.sub("[^A-Za-z]+", " ", word)
                 word = re.sub(" +", " ", word)
                 word = word.strip()
                 word = word.lower()  # transforms to lowercase
@@ -139,27 +142,6 @@ class Summarize:
         return stemmed_sentences
 
     @staticmethod
-    def text_rank(
-        similarity_matrix: np.ndarray, eps: float = 0.0001, p: float = 0.85
-    ) -> np.ndarray:
-        """
-        reference: https://www.analyticsvidhya.com/blog/2018/11/introduction-text-summarization-textrank-python/
-        :param similarity_matrix: input similarity_matrix
-        :param eps: endurable error for iterations
-        :param p: greedy probability i.e. 1-p for randomly randomly choosing
-        :return: np.array of unsorted ranked sentences' values
-        """
-        P = np.ones(len(similarity_matrix)) / len(similarity_matrix)
-        while True:
-            new_P = np.ones(len(similarity_matrix)) * (1 - p) / len(
-                similarity_matrix
-            ) + p * similarity_matrix.T.dot(P)
-            delta = abs(new_P - P).sum()
-            if delta <= eps:
-                return new_P
-            P = new_P
-
-    @staticmethod
     def build_similarity_matrix(stemmed_tokens: List) -> np.ndarray:
         """
         Reference: https://monkeylearn.com/blog/what-is-tf-idf/
@@ -182,6 +164,27 @@ class Summarize:
             else:
                 cosine_similarities[index] /= cosine_similarities[index].sum()
         return cosine_similarities
+
+    @staticmethod
+    def text_rank(
+            similarity_matrix: np.ndarray, eps: float = 0.0001, p: float = 0.85
+    ) -> np.ndarray:
+        """
+        reference: https://www.analyticsvidhya.com/blog/2018/11/introduction-text-summarization-textrank-python/
+        :param similarity_matrix: input similarity_matrix
+        :param eps: endurable error for iterations
+        :param p: greedy probability i.e. 1-p for randomly randomly choosing
+        :return: np.array of unsorted ranked sentences' values
+        """
+        P = np.ones(len(similarity_matrix)) / len(similarity_matrix)
+        while True:
+            new_P = np.ones(len(similarity_matrix)) * (1 - p) / len(
+                similarity_matrix
+            ) + p * similarity_matrix.T.dot(P)
+            delta = abs(new_P - P).sum()
+            if delta <= eps:
+                return new_P
+            P = new_P
 
     def summarize(self, length: int = 5) -> str:
         """
