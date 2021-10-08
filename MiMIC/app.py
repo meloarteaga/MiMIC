@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import nltk
-from summary import Summarize
+from MiMIC.summary import Summarize
 
 app = Flask(__name__)
 
@@ -19,7 +19,7 @@ def test_post():
 
 @app.route('/summarize', methods=["POST", "GET"])
 def summarize():
-    input_text = request.get_json(force=True)
+    input_text = request.get_json(force=True)["text"]
     summarized_text = Summarize(text=input_text, lang="english").summarize()
     result_dict = {'summarized text': summarized_text}
     return jsonify(result_dict)
@@ -27,7 +27,7 @@ def summarize():
 
 @app.route('/numSent', methods=["POST", "GET"])
 def get_num_sent():
-    input_text = request.get_json(force=True)
+    input_text = request.get_json(force=True)["text"]
     num_sent = len(nltk.sent_tokenize(input_text))
     result_dict = {'Number of sentences': num_sent}
     return jsonify(result_dict)
