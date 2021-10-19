@@ -39,6 +39,8 @@ class Summarize:
         # For acronyms, like i.e., F.B.I., ..., add a "<" sign after such that sent_tokenize will not stop sentences
         acronyms_low = "([a-z][.][a-z][.](?:[a-z][.])?)"
         acronyms_up = "([A-Z][.][A-Z][.](?:[A-Z][.])?)"
+        print(type(text))
+        print(text)
         text = re.sub(acronyms_low, "\\1<", text)
         text = re.sub(acronyms_up, "\\1<", text)
 
