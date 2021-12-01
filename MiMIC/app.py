@@ -7,6 +7,7 @@ from MiMIC.summary import Summarize
 app = Flask(__name__)
 CORS(app)
 
+
 @app.route('/', methods=["GET"])
 def test_get():
     response = flask.jsonify({'text':'This is a test API call!'})
