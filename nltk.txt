@@ -20,3 +20,4 @@ wmt15_eval
 word2vec_sample
 mwa_ppdb
 perluniprops
+stopwords
